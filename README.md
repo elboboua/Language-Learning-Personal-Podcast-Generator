@@ -15,5 +15,5 @@ This pet project uses the new OpenAI TTS models to take a youtube video, and con
 ## Usage
 To generate a `"podast"`, run:
 ```bash
-python personal-podcast.py <youtube-video-id> <ISO-language-code>
+python personal-podcast.py <youtube_video_id> <ISO_language_code>
 ```
