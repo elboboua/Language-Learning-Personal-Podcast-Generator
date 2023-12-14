@@ -19,10 +19,8 @@ def create_transcript_from_audio_file(audio_file: str):
     response = client.audio.transcriptions.create(
         model="whisper-1", language="fr", file=file, response_format="verbose_json"
     )
-    # response.segments
-    # load into json file
     new_file = open(f"output.json", "w")
-    new_file.write(json.dumps(response.segments))
+    new_file.write(json.dumps(response.segments))  # type: ignore # there is no valid type for verbose json Transcription response
     new_file.close()
 
 
@@ -86,17 +84,20 @@ def retrieve_youtube_transcript(youtube_id: str) -> str:
     return transcript
 
 
-def create_personal_podcast(youtube_id: str):
+def create_personal_podcast(youtube_id: str, iso_language_code: str = "fr"):
     print("Creating personal podcast for video: " + youtube_id)
     print("Retrieving transcript for video: " + youtube_id)
     transcript = retrieve_youtube_transcript(youtube_id)
     print("Transcript retrieved.")
     print("Translating and reformatting transcript...")
     translated_transcript = translate_and_reformat_transcript(transcript, "French")
+    if translated_transcript is None:
+        print("Error translating and reformatting transcript.")
+        exit(1)
     print("Translation and reformatting complete.")
     print("Creating audio file...")
     audio_file = create_audio_file_from_text(translated_transcript)
-    # print("Audio file created.")
+    print("Audio file created.")
     # print("Transcribing audio file...")
     # create_transcript_from_audio_file(audio_file)
 
@@ -104,9 +105,10 @@ def create_personal_podcast(youtube_id: str):
 
 
 if __name__ == "__main__":
-    if len(argv) < 2:
-        print("Usage: python personal-podcast.py <youtube_id>")
+    if len(argv) < 3:
+        print("Usage: python personal-podcast.py <youtube_id> <iso_language_code>")
         exit(1)
     else:
         youtube_id = argv[1]
-        create_personal_podcast(youtube_id)
+        iso_language_code = argv[2]
+        create_personal_podcast(youtube_id, iso_language_code)
