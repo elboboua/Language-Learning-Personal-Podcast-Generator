@@ -3,6 +3,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 from pydub import AudioSegment
 from sys import argv
+import re
 import time
 import json
 
@@ -14,10 +15,10 @@ with open("./key.txt", "r") as f:
 client = OpenAI(api_key=key)
 
 
-def create_transcript_from_audio_file(audio_file: str):
+def create_transcript_from_audio_file(audio_file: str, language: str = "fr"):
     file = open(audio_file, "rb")
     response = client.audio.transcriptions.create(
-        model="whisper-1", language="fr", file=file, response_format="verbose_json"
+        model="whisper-1", language=language, file=file, response_format="verbose_json"
     )
     new_file = open(f"output.json", "w")
     new_file.write(json.dumps(response.segments))  # type: ignore # there is no valid type for verbose json Transcription response
@@ -25,9 +26,21 @@ def create_transcript_from_audio_file(audio_file: str):
 
 
 def create_audio_file_from_text(text: str) -> str:
+    chunks = []
+    # create semantically meaningful chunks
+    text_split_by_punctuation = re.split(r"(?<=[.!?])\s+", text)
+    temp_chunk = ""
+    for i in range(0, len(text_split_by_punctuation)):
+        if len(temp_chunk) + len(text_split_by_punctuation[i]) < 4000:
+            temp_chunk += text_split_by_punctuation[i] + "."
+        else:
+            chunks.append(temp_chunk)
+            temp_chunk = ""
+    chunks.append(temp_chunk)
+
     audio_files = []
-    for i in range(0, len(text), 4000):
-        print(f"Creating audio file chunk {i} to {i+4000}...")
+    for i, chunk in enumerate(chunks):
+        print(f"Creating audio file chunk {i}/{len(chunks)}...")
         file_name = f"temp/output-temp-{i}.mp3"
         chunk = text[i : i + 4000]
         response = client.audio.speech.create(
@@ -72,7 +85,8 @@ def translate_and_reformat_transcript(
                 },
             ],
         )
-        translated_transcript += " " + resp.choices[0].message.content
+        if resp.choices[0].message.content is not None:
+            translated_transcript += " " + resp.choices[0].message.content
     return translated_transcript
 
 
@@ -80,7 +94,6 @@ def retrieve_youtube_transcript(youtube_id: str) -> str:
     transcript_resp = YouTubeTranscriptApi.get_transcript(youtube_id)
     # turn the transcript into a string
     transcript = TextFormatter().format_transcript(transcript_resp)
-    # print first 20
     return transcript
 
 
@@ -99,7 +112,7 @@ def create_personal_podcast(youtube_id: str, iso_language_code: str = "fr"):
     audio_file = create_audio_file_from_text(translated_transcript)
     print("Audio file created.")
     # print("Transcribing audio file...")
-    # create_transcript_from_audio_file(audio_file)
+    # create_transcript_from_audio_file(audio_file, iso_language_code)
 
     # print("Audio file transcribed.")
 
