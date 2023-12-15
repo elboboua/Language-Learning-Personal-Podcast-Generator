@@ -42,9 +42,8 @@ def create_audio_file_from_text(text: str) -> str:
     for i, chunk in enumerate(chunks):
         print(f"Creating audio file chunk {i}/{len(chunks)}...")
         file_name = f"temp/output-temp-{i}.mp3"
-        chunk = text[i : i + 4000]
         response = client.audio.speech.create(
-            model="tts-1-hd", voice="nova", input=chunk, speed=1
+            model="tts-1-hd", voice="alloy", input=chunk, speed=1
         )
         response.stream_to_file(file_name)
         audio_files.append(file_name)
@@ -54,7 +53,7 @@ def create_audio_file_from_text(text: str) -> str:
     combined_file_name = f"output-{time.time()}.mp3"
     combined = AudioSegment.from_file(audio_files[0], format="mp3")
     for file in audio_files[1:]:
-        next_segment = AudioSegment.from_file(audio_files, format="mp3")
+        next_segment = AudioSegment.from_file(file, format="mp3")
         combined += next_segment
 
     combined.export(combined_file_name, format="mp3")
@@ -103,7 +102,9 @@ def create_personal_podcast(youtube_id: str, iso_language_code: str = "fr"):
     transcript = retrieve_youtube_transcript(youtube_id)
     print("Transcript retrieved.")
     print("Translating and reformatting transcript...")
-    translated_transcript = translate_and_reformat_transcript(transcript, "French")
+    translated_transcript = translate_and_reformat_transcript(
+        transcript, iso_language_code
+    )
     if translated_transcript is None:
         print("Error translating and reformatting transcript.")
         exit(1)
